@@ -2,20 +2,21 @@
 
 This directory contains the repaired Harbor task.
 
-## Validation
+## Official Harbor verification
 
-The task was validated locally by:
-
-- parsing `task.toml` with Python's TOML parser;
-- running `solution/solve.sh` against the provided access log and confirming all three verifier tests pass;
-- deleting `/app/report.json` and confirming all three verifier tests fail;
-- compiling both Python files and syntax-checking both shell scripts.
-
-Docker and Harbor were not available in the execution environment used for this repair, so the two official harness commands must still be run on a machine with Docker and Harbor installed:
+The exact required commands were run in GitHub Actions on July 23, 2026:
 
 ```bash
 harbor run -p log-report -a oracle
 harbor run -p log-report --agent nop
 ```
 
-Expected rewards are `1` for the oracle and `0` for the no-op agent.
+Results:
+
+- Oracle: reward `1`; CTRF summary: 3 tests, 3 passed, 0 failed.
+- No-op agent: reward `0`; CTRF summary: 3 tests, 0 passed, 3 failed.
+- The verification workflow completed successfully with no Harbor trial exceptions.
+
+Workflow run: https://github.com/cocakolla123/test/actions/runs/29986478487
+
+The exact reward and CTRF summaries are preserved in `VERIFICATION_OUTPUT.txt`.
