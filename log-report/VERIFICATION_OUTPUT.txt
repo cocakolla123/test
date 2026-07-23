@@ -1,0 +1,35 @@
+Official Harbor verification
+Run date: 2026-07-23
+Workflow: https://github.com/cocakolla123/test/actions/runs/29986478487
+
+Command: harbor run -p log-report -a oracle
+Harbor result reward: 1.0
+reward.txt:
+1
+CTRF summary:
+{
+  "tests": 3,
+  "passed": 3,
+  "failed": 0,
+  "skipped": 0,
+  "pending": 0,
+  "other": 0,
+  "start": 1784789641.6450744,
+  "stop": 1784789641.6580145
+}
+
+Command: harbor run -p log-report --agent nop
+Harbor result reward: 0.0
+reward.txt:
+0
+CTRF summary:
+{
+  "tests": 3,
+  "passed": 0,
+  "failed": 3,
+  "skipped": 0,
+  "pending": 0,
+  "other": 0,
+  "start": 1784789663.6687257,
+  "stop": 1784789663.7479453
+}
