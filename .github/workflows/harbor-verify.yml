@@ -1,0 +1,114 @@
+name: Verify Harbor task
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install Harbor
+        run: |
+          uv tool install harbor
+          "$HOME/.local/bin/harbor" --version
+
+      - name: Verify Docker
+        run: |
+          docker --version
+          docker ps
+
+      - name: Run oracle
+        run: |
+          set -o pipefail
+          "$HOME/.local/bin/harbor" run -p log-report -a oracle 2>&1 | tee harbor-oracle.log
+
+      - name: Run no-op agent
+        run: |
+          set +e
+          set -o pipefail
+          "$HOME/.local/bin/harbor" run -p log-report --agent nop 2>&1 | tee harbor-nop.log
+          printf 'harbor_nop_exit=%s\n' "${PIPESTATUS[0]}" >> "$GITHUB_ENV"
+          exit 0
+
+      - name: Assert rewards and CTRF summaries
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          result_paths = sorted(Path("jobs").glob("*/*/result.json"))
+          assert len(result_paths) == 2, f"Expected two Harbor result.json files, found {len(result_paths)}: {result_paths}"
+
+          records = {}
+          lines = []
+          for result_path in result_paths:
+              result = json.loads(result_path.read_text(encoding="utf-8"))
+              agent = result["agent_info"]["name"]
+              reward = result["verifier_result"]["rewards"]["reward"]
+              trial_dir = result_path.parent
+
+              reward_files = list(trial_dir.rglob("reward.txt"))
+              ctrf_files = list(trial_dir.rglob("ctrf.json"))
+              assert len(reward_files) == 1, f"Expected one reward.txt for {agent}, found {reward_files}"
+              assert len(ctrf_files) == 1, f"Expected one ctrf.json for {agent}, found {ctrf_files}"
+
+              reward_text = reward_files[0].read_text(encoding="utf-8").strip()
+              ctrf = json.loads(ctrf_files[0].read_text(encoding="utf-8"))
+              ctrf_summary = ctrf["results"]["summary"]
+
+              records[agent] = {
+                  "result_reward": reward,
+                  "reward_text": reward_text,
+                  "ctrf_summary": ctrf_summary,
+              }
+              lines.extend(
+                  [
+                      f"agent={agent}",
+                      f"result_reward={reward}",
+                      f"reward.txt={reward_text}",
+                      "ctrf_summary=" + json.dumps(ctrf_summary, sort_keys=True),
+                      "",
+                  ]
+              )
+
+          assert records["oracle"]["result_reward"] == 1.0, records
+          assert records["oracle"]["reward_text"] == "1", records
+          assert records["oracle"]["ctrf_summary"]["tests"] == 3, records
+          assert records["oracle"]["ctrf_summary"]["passed"] == 3, records
+          assert records["oracle"]["ctrf_summary"]["failed"] == 0, records
+
+          assert records["nop"]["result_reward"] == 0.0, records
+          assert records["nop"]["reward_text"] == "0", records
+          assert records["nop"]["ctrf_summary"]["tests"] == 3, records
+          assert records["nop"]["ctrf_summary"]["passed"] == 0, records
+          assert records["nop"]["ctrf_summary"]["failed"] == 3, records
+
+          Path("verification-summary.txt").write_text("\n".join(lines), encoding="utf-8")
+          print(Path("verification-summary.txt").read_text(encoding="utf-8"))
+          PY
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: harbor-verification
+          path: |
+            harbor-oracle.log
+            harbor-nop.log
+            verification-summary.txt
+            jobs/**/result.json
+            jobs/**/reward.txt
+            jobs/**/ctrf.json
