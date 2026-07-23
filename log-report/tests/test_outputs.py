@@ -28,6 +28,6 @@ def test_success_criterion_2_json_schema() -> None:
 
 
 def test_success_criterion_3_values() -> None:
-    """Success criterion 3: The report values correctly summarize the provided access log."""
+    """Success criterion 3: The report contains the exact expected values."""
     data = json.loads(REPORT_PATH.read_text(encoding="utf-8"))
     assert data == EXPECTED_REPORT, f"Expected {EXPECTED_REPORT}, found {data}."
