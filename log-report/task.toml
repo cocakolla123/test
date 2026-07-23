@@ -14,7 +14,7 @@ model_tested = "GPT-5.4"
 agent_tested = "Terminus-2"
 difficulty_explanation = "The task requires straightforward parsing and aggregation of a small Apache-style access log."
 solution_explanation = "Read each non-empty log entry, count total requests and distinct client IPs, determine the most frequent request path, and write the values as JSON."
-verification_explanation = "The verifier checks the exact artifact path, JSON schema and types, and expected aggregate values for the provided access log."
+verification_explanation = "The verifier checks the artifact path and JSON schema, then independently recomputes the expected aggregate values from the provided access log."
 
 [verifier]
 timeout_sec = 120.0
